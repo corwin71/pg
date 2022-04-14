@@ -1,0 +1,53 @@
+!/bin/bash
+
+#echo "Hello supervisor!"
+
+export BACKUPFLD="/u02/backups"
+export PGHOST="server"
+export PGPORT=5432
+export PGUSER="postgres"
+export PGPASSWORD="password"
+export PURGEDAY=7
+export PGDATABASE="1cbase"
+
+#update bases list
+
+BKPDIR="$BACKUPFLD/$PGDATABASE"
+
+if [ ! -d "$BKPDIR/logs" ]; then
+    mkdir "$BACKUPFLD/$PGDATABASE"
+    mkdir "$BACKUPFLD/$PGDATABASE/logs"
+fi 
+
+LOGFILE="$BACKUPFLD/$PGDATABASE/logs/bkp_"$PGDATABASE"_$(date +"%d-%m-%Y_%H%M%S").log"
+DUMPFILE="$BKPDIR/backup_"$PGDATABASE"_$(date +"%d-%m-%Y_%H%M%S").bkp"
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+
+echo -e "$DATETIME Start backup processing. " >> $LOGFILE
+echo -e "PID: $$\n " >> $LOGFILE
+
+pg_dump --format=c --role=postgres --encoding=UTF8 --verbose --file=$DUMPFILE --section=pre-data --section=data --section=post-data --blobs 2>> $LOGFILE
+
+if [ $? -ne 0 ]; then
+    
+    cat $LOGFILE | mail -v  -s " Postgres DB backup error!!!!" email@test.com
+    echo $DATETIME  " Backup error!!!"  >> /u02/share/logs/PGbkplog/error.log
+fi 
+
+    DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+    echo -e " \n$DATETIME End backup processing.\n " >> $LOGFILE
+
+    DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+    echo -e "$DATETIME Start purge processing.\n " >> $LOGFILE
+
+    #delete old backups
+    find $BKPDIR -maxdepth 1 -type f -name '*.bkp' -mtime +$PURGEDAY -print -delete >> $LOGFILE
+
+    #delete old logs
+    find $BKPDIR/logs -maxdepth 1 -type f -name '*.log' -mtime +$PURGEDAY -print -delete >> $LOGFILE
+
+    DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+    echo -e " \n$DATETIME End purge processing.\n "  >> $LOGFILE
+    echo -e "$DATETIME Script execute successfully." >> $LOGFILE
+
