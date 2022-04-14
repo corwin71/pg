@@ -1,0 +1,61 @@
+!/bin/bash
+#echo "Hello supervisor"
+
+export BACKUPFLD="/u02/backups"
+export PGHOST="server"
+export PGPORT=5432
+export PGUSER="postgres"
+export PGPASSWORD="password"
+export PURGEDAY=7
+export PGDATABASE="1cbase"
+
+BKPDIR="$BACKUPFLD/$PGDATABASE"
+LOGFILE="$BACKUPFLD/$PGDATABASE/logs/vac_"$PGDATABASE"_$(date +"%d-%m-%Y_%H%M%S").log"
+
+#if [ ! -d "$BKPDIR" ]; then
+#mkdir "$BKPDIR"
+mkdir -p "$BKPDIR/logs"
+#fi
+
+DUMPFILE="$BKPDIR/backup_"$PGDATABASE"_$(date +"%d-%m-%Y_%H%M%S").bkp"
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+
+echo -e "$DATETIME Start vacuumdb processing.\n " >> $LOGFILE
+echo -e "PID: $$\n " >> $LOGFILE
+
+vacuumdb --echo --full --analyze >> $LOGFILE
+
+if [ $?==0 ]; then
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+
+echo -e " \n$DATETIME End vacuumdb processing.\n " >> $LOGFILE
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e "$DATETIME vacuumdb execute successfully.\n" >> $LOGFILE
+
+else
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e "$DATETIME !!! vacuumdb execution error !!!\n" >> $LOGFILE
+
+fi 
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e "$DATETIME Start reindexdb processing.\n " >> $LOGFILE
+
+
+reindexdb --echo >> $LOGFILE
+
+if [ $?==0 ]; then
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e " \n$DATETIME End reindexdb processing.\n " >> $LOGFILE
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e "$DATETIME reindexdb execute successfully." >> $LOGFILE
+
+else
+
+DATETIME=$(date +"%d-%m-%Y_%H:%M:%S")
+echo -e "$DATETIME !!! reindexdb execution error !!!" >> $LOGFILE
+
+fi
